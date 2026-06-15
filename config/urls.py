@@ -5,8 +5,9 @@ from drf_yasg import openapi
 
 
 schema_view = get_schema_view(
-    openapi.Info(title='FactoryAPI', default_version='v1'),  # ← исправлено
-    public=True  # ← убраны пробелы для стиля
+    openapi.Info(title='FactoryAPI', default_version='v1'),
+    public=True,
+    permission_classes=[]
 )
 
 urlpatterns = [
@@ -15,9 +16,9 @@ urlpatterns = [
     path('api/factory/products', include('apps.products.urls')), 
     path('api/factory/shipments', include('apps.shipments.urls')),
     path('api/factory/reception', include('apps.reception.urls')), 
-    path('api/factory/payment', include('apps.payment.urls')),
+    path('api/factory/payment', include('apps.payments.urls')),
     path('api/factory/invoices', include('apps.invoices.urls')), 
-    path('api/factory/stats', include('apps.stats.urls')),
+    path('api/factory/stats', include('apps.statistics.urls')),
     path('api/factory/reports', include('apps.reports.urls')),
     path('api/factory/sync', include('apps.sync.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0)),

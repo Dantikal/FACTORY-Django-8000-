@@ -4,5 +4,5 @@ from .views import ShipmentListCreateView, ShipmentDetailView, ShipmentStatusUpd
 urlpatterns = [
     path('', ShipmentListCreateView.as_view()),
     path('<uuid:id>/', ShipmentDetailView.as_view()),
-    path('<uuid:id>/status', ShipmentStatusUpdateView)
+    path('<uuid:id>/status', ShipmentStatusUpdateView.as_view())
 ]

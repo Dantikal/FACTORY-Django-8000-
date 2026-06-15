@@ -1,7 +1,7 @@
-from rest_framework_simplejwt.serializer import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User
 
-class CastomTokenObtianPairSerializer(TokenObtainPairSerializer):
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):  # Исправлено: Custom (было Castom), Obtain (было Obtian)
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)

@@ -13,10 +13,10 @@ class Shipment(BaseModel):
     truck_driver = models.CharField(max_length=255)
     status = models.CharField(max_length=30, choices=ShipmentStatus.choices, default=ShipmentStatus.IN_TRANSIT)
     total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
-    created_by = models.ForeignKey('user.User', on_delete=models.PROTECT, related_name="shipments")
+    created_by = models.ForeignKey('users.User', on_delete=models.PROTECT, related_name="shipments")
 
 class ShipmentItem(BaseModel):
-    product = models.ForeignKey('product.Product', on_delete=models.PROTECT)
+    product = models.ForeignKey('products.Product', on_delete=models.PROTECT)
     qty_boxes = models.PositiveBigIntegerField()
     qty_pieces = models.PositiveBigIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
