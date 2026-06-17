@@ -1,13 +1,14 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView  # TokenObtainPairView (с большой V)
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import CustomTokenObtainPairSerializer  # правильный импорт
+from .serializers import CustomTokenObtainPairSerializer
+from shared.exceptions import AppException
 
 
-class LoginView(TokenObtainPairView):  # TokenObtainPairView (исправлено: View с большой буквы, не view)
-    serializer_class = CustomTokenObtainPairSerializer  # CustomTokenObtainPairSerializer (исправлено)
+class LoginView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [AllowAny]
 
 class RefreshView(TokenRefreshView):
@@ -19,7 +20,11 @@ class LogoutView(APIView):
         try:
             refresh = request.data['refresh']
             token = RefreshToken(refresh)
-            token.blacklist()  # blacklist (исправлено: blaklist -> blacklist)
-            return Response({'detail': 'Logged out'}, status=200)  # добавлен return и статус 200
-        except Exception as e:  # лучше указывать конкретное исключение
-            return Response({'detail': 'Invalid token'}, status=400)
+            token.blacklist()
+            return Response({'detail': 'Logged out'}, status=200)
+        except Exception:
+            raise AppException(
+                status_code=401,
+                error_code="token_invalid",
+                message="Invalid or expired token"
+            )

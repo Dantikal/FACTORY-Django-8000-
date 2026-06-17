@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_yasg',
     'celery',
+    'corsheaders',
     'django_celery_results',
     'apps.users',
     'apps.products',
@@ -34,8 +35,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'shared.middleware.TraceIdMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -111,6 +114,7 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'shared.pagination.CustomPagination',
     'PAGE_SIZE': 20,
+    'EXCEPTION_HANDLER': 'shared.exception_handler.custom_exception_handler',
 }
 
 CELERY_BROKER_URL = REDIS_URL

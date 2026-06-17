@@ -1,8 +1,8 @@
 from rest_framework import generics
-from rest_framework.exceptions import NotFound
 from .models import Product
 from .serializers import ProductSerializer
 from shared.permissions import IsFactory
+from shared.exceptions import AppException
 
 class ProductListCreateView(generics.ListAPIView):
     queryset = Product.objects.filter(status='active')
@@ -27,4 +27,8 @@ class ProductByBarcodeView(generics.RetrieveAPIView):
         try:
             return Product.objects.get(barcode=barcode, status='active')
         except Product.DoesNotExist:
-            raise NotFound('Product not found')
+            raise AppException(
+                status_code=404,
+                error_code="product_not_found",
+                message=f"Product with barcode '{barcode}' not found"
+            )

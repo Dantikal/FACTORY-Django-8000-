@@ -21,7 +21,7 @@ class DiscrepancyType(models.TextChoices):
 class FactoryDelivery(BaseModel):
     """Поставка от завода на склад"""
     shipment = models.ForeignKey(
-        'shipments.Shipment',  # исправлено: shipments (множественное число)
+        'shipments.Shipment',
         on_delete=models.PROTECT,
         related_name='deliveries'
     )
@@ -33,7 +33,7 @@ class FactoryDelivery(BaseModel):
         choices=DeliveryStatus.choices,
         default=DeliveryStatus.PENDING
     )
-    total_amount = models.DecimalField(  # исправлено: total_amount (было total_amout)
+    total_amount = models.DecimalField(
         max_digits=14,
         decimal_places=2,
         default=0,
@@ -43,11 +43,18 @@ class FactoryDelivery(BaseModel):
         blank=True,
         help_text='Комментарий заведующего складом'
     )
-    created_by = models.ForeignKey(  # исправлено: добавил created_by (было пропущено)
+    created_by = models.ForeignKey(
         'users.User',
         on_delete=models.PROTECT,
         related_name='created_deliveries'
     )
+    client_id = models.CharField(
+        max_length=36,
+        unique=True,
+        null=True,
+        blank=True
+    )
+    operation_time = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = 'Поставка от завода'
@@ -66,11 +73,11 @@ class DeliveryItem(BaseModel):
         related_name='items'
     )
     product = models.ForeignKey(
-        'products.Product',  # исправлено: products (множественное число)
+        'products.Product',
         on_delete=models.PROTECT,
         related_name='delivery_items'
     )
-    expected_qty = models.PositiveIntegerField(  # исправлено: PositiveIntegerField (было PositiveBigIntegerField)
+    expected_qty = models.PositiveIntegerField(
         help_text='Ожидаемое количество (в штуках)'
     )
     actual_qty = models.PositiveIntegerField(
@@ -78,13 +85,13 @@ class DeliveryItem(BaseModel):
         blank=True,
         help_text='Фактическое количество (в штуках)'
     )
-    discrepancy_type = models.CharField(  # исправлено: добавил поле discrepancy_type
+    discrepancy_type = models.CharField(
         max_length=20,
         choices=DiscrepancyType.choices,
         default=DiscrepancyType.NONE,
         help_text='Тип расхождения'
     )
-    discrepancy_qty = models.IntegerField(  # исправлено: IntegerField (было IntegerChoices)
+    discrepancy_qty = models.IntegerField(
         default=0,
         help_text='Количество расхождения (положительное число)'
     )

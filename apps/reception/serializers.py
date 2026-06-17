@@ -3,6 +3,7 @@ from django.db import transaction
 from .models import FactoryDelivery, DeliveryItem, DeliveryStatus, DiscrepancyType
 from apps.shipments.models import Shipment
 from apps.products.models import Product
+from shared.exceptions import AppException
 
 
 class DeliveryItemSerializer(serializers.ModelSerializer):
@@ -68,7 +69,11 @@ class CreateDeliverySerializer(serializers.Serializer):
                 raise serializers.ValidationError("Эта отгрузка уже была принята")
             return value
         except Shipment.DoesNotExist:
-            raise serializers.ValidationError("Отгрузка с таким ID не найдена")
+            raise AppException(
+                status_code=404,
+                error_code="shipment_not_found",
+                message=f"Shipment with ID '{value}' not found"
+            )
     
     def validate_delivery_number(self, value):
         """Проверяем уникальность номера поставки"""
@@ -78,7 +83,14 @@ class CreateDeliverySerializer(serializers.Serializer):
     
     def validate(self, data):
         """Дополнительная валидация: warehouse_id должен совпадать с отгрузкой"""
-        shipment = Shipment.objects.get(id=data['shipment_id'])
+        try:
+            shipment = Shipment.objects.get(id=data['shipment_id'])
+        except Shipment.DoesNotExist:
+            raise AppException(
+                status_code=404,
+                error_code="shipment_not_found",
+                message=f"Shipment with ID '{data['shipment_id']}' not found"
+            )
         if str(shipment.warehouse_id) != str(data['warehouse_id']):
             raise serializers.ValidationError(
                 "Склад-получатель не совпадает со складом в отгрузке"
@@ -130,7 +142,11 @@ class AcceptFullSerializer(serializers.Serializer):
                     f"Поставка уже обработана, текущий статус: {delivery.status}"
                 )
         except FactoryDelivery.DoesNotExist:
-            raise serializers.ValidationError("Поставка не найдена")
+            raise AppException(
+                status_code=404,
+                error_code="delivery_not_found",
+                message=f"Delivery with ID '{delivery_id}' not found"
+            )
         return data
 
 
