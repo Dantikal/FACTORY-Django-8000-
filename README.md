@@ -1,166 +1,132 @@
-# 🏭 Factory Service
+# 🏭 Factory Service — API Contract
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/Django-4.2%2B-green.svg)](https://www.djangoproject.com/)
 [![DRF](https://img.shields.io/badge/DRF-3.14%2B-red.svg)](https://www.django-rest-framework.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Factory Service** — это центральный микросервис для управления складскими операциями, генерации отчетов и обработки финансовых транзакций на заводе. Сервис интегрируется с внешними системами водителей и складов, обеспечивая единую точку контроля.
-
----
-
-## 🚀 Основные возможности
-
-- **📦 Управление инвойсами:** Генерация и хранение накладных (PDF/Excel) для отгрузок.
-- **💰 Финансовый учет:** Отслеживание задолженностей складов и выплат заводу.
-- **📊 Система отчетов:** Более 10 видов аналитических отчетов (движение товаров, рейтинги, задолженности).
-- **🚚 Приемка товаров:** Регистрация поставок от клиентов и поставщиков.
-- **🔄 Асинхронная обработка:** Использование Celery для тяжелых задач и генерации документов.
-- **🔌 Интеграция:** Публикация и подписка на события через шину данных.
+**Factory Service** — это центральный узел (Backend API) для управления операциями завода, складской логистикой и финансовой отчетностью.
 
 ---
 
-## 🛠 Технологический стек
+## 📌 Общая информация
 
-- **Backend:** Python 3.10+, Django 4.2, Django REST Framework.
-- **База данных:** PostgreSQL.
-- **Кеширование и брокер:** Redis.
-- **Фоновые задачи:** Celery.
-- **Документация API:** Swagger (drf-yasg) & Redoc.
-- **Генерация документов:** WeasyPrint (PDF), OpenPyXL (Excel).
+- **Base URL:** `http://localhost:8000/api/factory`
+- **Аутентификация:** JWT (Header: `Authorization: Bearer <access_token>`)
+- **Формат данных:** JSON (Content-Type: `application/json`)
+- **Часовой пояс:** `Asia/Bishkek` (UTC+6)
 
 ---
 
-## 📦 Структура проекта
+## ⚠️ Формат ошибок
 
-```text
-├── apps/
-│   ├── events/       # Интеграционная шина (Pub/Sub)
-│   ├── invoices/     # Управление накладными и PDF-генерация
-│   ├── payments/     # Финансовый учет и долги
-│   ├── products/     # Каталог продукции
-│   ├── reception/    # Приемка товаров на склад
-│   ├── reports/      # Мощный генератор отчетов
-│   ├── shipments/    # Отгрузки продукции
-│   └── users/        # Управление пользователями и доступами
-├── celery_app/       # Конфигурация воркеров
-├── config/           # Настройки проекта (Django settings)
-└── shared/           # Общие утилиты, middleware и базовые модели
-```
+Все ошибки возвращаются в едином стандарте:
 
----
-
-## 📖 API Contract (Документация)
-
-<details>
-<summary>Нажмите, чтобы развернуть подробную документацию API</summary>
-
-### Базовая информация
-**Base URL:** `http://localhost:8000/api/factory`  
-**Auth:** `Authorization: Bearer <access_token>` (для всех эндпоинтов, кроме login/refresh)
-
-### Форматы данных
-- **UUID:** Строка формата `550e8400-e29b-41d4-a716-446655440000`
-- **Деньги:** Строка `12345.50` (decimal, 2 знака)
-- **Даты:** `2024-06-15` (YYYY-MM-DD)
-- **Datetime:** `ISO 8601`
-
----
-
-### 🔐 AUTH (Авторизация)
-
-#### `POST /auth/login`
-Получить токены.
 ```json
 {
-  "username": "admin",
-  "password": "secret123"
+  "error": {
+    "code": "snake_case_error_code",
+    "message": "Человекочитаемое описание ошибки",
+    "fields": null,
+    "trace_id": "uuid-трассировки-запроса"
+  }
 }
 ```
 
-#### `POST /auth/refresh`
-Обновить access токен.
+`fields` может содержать объект с ошибками по конкретным полям при ошибке валидации (400).
 
-#### `GET /auth/me`
-Информация о текущем пользователе.
-
----
-
-### 📦 PRODUCTS (Товары)
-
-#### `GET /products`
-Список товаров с фильтрацией и пагинацией.
-- **Params:** `status`, `search`, `ordering`, `page`.
-
-#### `POST /products`
-Создание товара (только Admin).
+### Коды ответов
+- `400` — Ошибка бизнес-логики или валидации.
+- `401` — Ошибка авторизации (токен недействителен).
+- `403` — Недостаточно прав для выполнения действия.
+- `404` — Ресурс не найден.
+- `500` — Внутренняя ошибка сервера.
 
 ---
 
-### 🚚 SHIPMENTS (Отгрузки)
+## 🔐 Аутентификация (AUTH)
 
-#### `GET /shipments`
-Список отгрузок завода.
-
-#### `POST /shipments`
-Создание новой отгрузки с позициями.
-
----
-
-### 📥 RECEPTION (Приёмка)
-
-#### `POST /reception/{id}/accept`
-Полная приёмка товара на складе.
-
-#### `POST /reception/{id}/accept-partial`
-Частичная приёмка с указанием расхождений (недостача, брак).
+| Метод | Эндпоинт | Описание | Доступ |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/auth/login` | Получение Access/Refresh токенов | AllowAny |
+| `POST` | `/auth/refresh` | Обновление Access токена | AllowAny |
+| `GET` | `/auth/me` | Данные текущего пользователя | Authenticated |
+| `GET` | `/auth/users` | Список всех пользователей системы | Admin |
 
 ---
 
-### 💰 PAYMENTS (Финансы)
+## 📦 Управление товарами (PRODUCTS)
 
-#### `GET /payments/debt?warehouse_id={uuid}`
-Получить текущий долг конкретного склада.
-
-#### `POST /payments`
-Зафиксировать оплату от склада.
-
----
-
-### 📊 STATISTICS & REPORTS
-- `GET /stats/top-products` — Самые продаваемые товары.
-- `GET /reports/warehouse-debts` — Excel отчет по долгам.
-- `GET /invoices/{id}/pdf` — Скачать накладную.
-
-</details>
+| Метод | Эндпоинт | Описание |
+| :--- | :--- | :--- |
+| `GET` | `/products` | Список активных товаров (фильтрация: `search`, `status`) |
+| `POST` | `/products` | Регистрация нового товара (только Admin) |
+| `GET` | `/products/{id}` | Детальная информация о товаре |
+| `GET` | `/products/barcode/{barcode}` | Поиск товара по штрих-коду |
 
 ---
 
-## ⚙️ Установка и запуск
+## 🚚 Отгрузки и Приемка (LOGISTICS)
 
-### 1. Клонирование и настройка
-```bash
-git clone https://github.com/Dantikal/FACTORY-Django-8000-.git
-cd factory-servise
-cp .env.example .env
-```
+### Отгрузки (Shipments)
+- `GET /shipments` — История всех отгрузок завода.
+- `POST /shipments` — Создание новой отгрузки (указываются позиции, водитель, машина).
+- `GET /shipments/{id}` — Детали конкретной отгрузки с перечнем товаров.
 
-### 2. Установка зависимостей
-```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements/base.txt
-```
-
-### 3. Запуск
-```bash
-python manage.py migrate
-python manage.py runserver
-```
+### Приемка на складе (Reception)
+- `POST /reception` — Создание записи о прибытии товара на склад.
+- `POST /reception/{id}/accept` — Полная приемка (подтверждение соответствия отгрузке).
+- `POST /reception/{id}/accept-partial` — Приемка с расхождениями (недостача, брак).
 
 ---
 
-## 📝 Дополнительно
-- **Swagger UI:** `/swagger/`
-- **Redoc:** `/redoc/`
-- **Код:** PEP8, миграции через `makemigrations`, тесты через `test`.
+## 💰 Финансовый учет (PAYMENTS)
+
+| Метод | Эндпоинт | Описание |
+| :--- | :--- | :--- |
+| `GET` | `/payments/debt` | Текущая задолженность склада (требуется `warehouse_id`) |
+| `POST` | `/payments` | Регистрация оплаты от склада (нал/безнал) |
+| `GET` | `/payments/debts/all` | Список долгов по всем контрагентам |
+
+---
+
+## 📊 Отчеты и Документы (REPORTS & INVOICES)
+
+### Инвойсы (PDF/Excel)
+- `GET /invoices/{id}/pdf` — Генерация официальной накладной в формате PDF.
+- `GET /invoices/{id}/excel` — Выгрузка накладной в Excel.
+
+### Аналитические отчеты
+- `GET /reports/warehouse-debts` — Сводный отчет по долгам всех складов.
+- `GET /reports/inventory` — Отчет по остаткам продукции.
+- `GET /reports/shipments` — Отчет по всем отгрузкам за период.
+
+---
+
+## 🔄 Офлайн-синхронизация (SYNC)
+
+| Метод | Эндпоинт | Описание |
+| :--- | :--- | :--- |
+| `GET` | `/sync/v1/initial` | Начальная синхронизация: товары (с остатками) и долги водителей |
+| `POST` | `/sync/push` | Отправка локальных операций с устройства на сервер |
+| `GET` | `/sync/pull` | Получение изменений с сервера |
+
+---
+
+## 🛠 Технический стек
+
+- **Core:** Python 3.10 / Django 4.2 / DRF 3.14
+- **Database:** PostgreSQL (основное хранилище)
+- **Cache/Broker:** Redis + Celery (фоновая генерация тяжелых отчетов)
+- **Docs:** Swagger UI (`/swagger/`) и Redoc (`/redoc/`)
+
+---
+
+## ⚙️ Быстрый старт
+
+1. **Установка зависимостей:**
+   ```bash
+   pip install -r requirements/base.txt
+   ```
+2. **Настройка БД:** Скопируйте `.env.example` в `.env` и укажите данные PostgreSQL.
+3. **Запуск миграций:** `python manage.py migrate`
+4. **Запуск сервера:** `python manage.py runserver`

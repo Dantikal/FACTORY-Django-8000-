@@ -1,0 +1,85 @@
+Drivers Service — API Contract
+
+Base URL: http://localhost:8082/api/drivers
+
+Auth: Authorization: Bearer <access_token> (все эндпоинты кроме login/refresh)
+
+Content-Type: application/json
+
+Общие форматы UUID → "550e8400-e29b-41d4-a716-446655440000" Деньги → "12345.50" (decimal, 2 знака) Даты → "2024-06-15" (YYYY-MM-DD) Datetime → "2024-06-15T10:30:00+06:00" (ISO 8601) Ошибки (единый стандарт) json{ "error": { "code": "driver_not_found", "message": "Driver with ID '...' not found", "fields": null, "trace_id": "uuid" } } Ошибка валидации json{ "error": { "code": "validation_error", "message": "Validation error", "fields": { "amount": "must be greater than 0", "driverId": "must not be null" }, "trace_id": "uuid" } } Пагинация json{ "count": 100, "next": "http://localhost:8082/api/drivers?page=2", "previous": null, "results": [] }
+
+AUTH POST /auth/login Авторизация по телефону и паролю.
+
+Доступно без токена. Request: json{ "phone": "+996700123456", "password": "secret123" } Response 200: json{ "access": "<jwt_access_token>", "refresh": "<jwt_refresh_token>", "user": { "id": "uuid", "fullName": "Азиз Карыбеков", "phone": "+996700123456", "carNumber": "B 123 AA", "warehouseId": "uuid", "status": "active" } } Errors: 400 invalid_credentials — неверный телефон или пароль 400 driver_inactive — водитель деактивирован
+
+POST /auth/refresh Request: json{ "refresh": "<jwt_refresh_token>" } Response 200: json{ "access": "<new_jwt_access_token>" } Errors: 401 token_expired — токен истёк 401 token_invalid — токен невалидный
+
+POST /auth/logout Request: json{ "refresh": "<jwt_refresh_token>" } Response 200: json{ "detail": "Выход выполнен." }
+
+DRIVERS (Справочник водителей) GET /drivers Список всех водителей. Query params: ?status=active|inactive ?warehouse_id=uuid ?search=string — поиск по имени, телефону, номеру машины ?page=1 ?page_size=20 Response 200: json{ "count": 25, "results": [ { "id": "uuid", "fullName": "Азиз Карыбеков", "carNumber": "B 123 AA", "phone": "+996700123456", "warehouseId": "uuid", "status": "active", "createdAt": "2024-06-15T10:00:00+06:00", "updatedAt": "2024-06-15T10:00:00+06:00" } ] }
+
+POST /drivers Создать водителя. Request: json{ "fullName": "Азиз Карыбеков", "carNumber": "B 123 AA", "phone": "+996700123456", "password": "pass1234", "warehouseId": "uuid" } Response 201: json{ "id": "uuid", "fullName": "Азиз Карыбеков", "carNumber": "B 123 AA", "phone": "+996700123456", "warehouseId": "uuid", "status": "active", "createdAt": "2024-06-15T10:00:00+06:00" } Errors: 400 validation_error — невалидные поля 400 phone_already_exists — телефон уже занят
+
+GET /drivers/{id} Response 200: json{ "id": "uuid", "fullName": "Азиз Карыбеков", "carNumber": "B 123 AA", "phone": "+996700123456", "warehouseId": "uuid", "status": "active", "createdAt": "2024-06-15T10:00:00+06:00", "updatedAt": "2024-06-15T10:00:00+06:00" } Errors: 404 driver_not_found
+
+PUT /drivers/{id} Request: json{ "fullName": "Азиз Карыбеков", "carNumber": "B 456 BB", "phone": "+996700123456", "warehouseId": "uuid", "status": "active" } Response 200: → обновлённый объект водителя Errors: 404 driver_not_found 400 validation_error
+
+GET /drivers/{id}/debt Текущий долг конкретного водителя. Response 200: json{ "driverId": "uuid", "fullName": "Азиз Карыбеков", "totalDebt": "15000.00", "updatedAt": "2024-06-15T14:00:00+06:00" } Errors: 404 driver_not_found
+
+GET /drivers/debts Долги всех водителей. Query params: ?warehouse_id=uuid ?min_debt=1000 — только с долгом больше суммы Response 200: json[ { "driverId": "uuid", "fullName": "Азиз Карыбеков", "carNumber": "B 123 AA", "totalDebt": "15000.00", "updatedAt": "2024-06-15T14:00:00+06:00" }, { "driverId": "uuid", "fullName": "Лео ДиКаприо", "carNumber": "B 456 BB", "totalDebt": "8500.00", "updatedAt": "2024-06-14T10:00:00+06:00" } ] Список отсортирован по убыванию долга.
+
+ORDERS (Заявки водителей) GET /orders Список заявок. Query params: ?driver_id=uuid ?warehouse_id=uuid ?status=new|confirmed|modified|rejected|dispatched ?date_from=2024-06-01 ?date_to=2024-06-30 ?page=1 ?page_size=20 Response 200: json{ "count": 10, "results": [ { "id": "uuid", "driverId": "uuid", "driverName": "Азиз Карыбеков", "warehouseId": "uuid", "status": "new", "statusDisplay": "Новая", "totalAmount": "12000.00", "comment": "Срочно", "requestedAt": "2024-06-15T09:00:00+06:00", "createdAt": "2024-06-15T09:00:00+06:00" } ] }
+
+POST /orders Создать заявку от водителя. Request: json{ "driverId": "uuid", "warehouseId": "uuid", "comment": "Срочно", "items": [ { "productId": "uuid", "requestedQty": 100 }, { "productId": "uuid", "requestedQty": 50 } ] } Response 201: json{ "id": "uuid", "driverId": "uuid", "driverName": "Азиз Карыбеков", "warehouseId": "uuid", "status": "new", "statusDisplay": "Новая", "totalAmount": "12000.00", "comment": "Срочно", "requestedAt": "2024-06-15T09:00:00+06:00", "items": [ { "id": "uuid", "productId": "uuid", "productName": "Молоко 3.2% 1л", "barcode": "4600123456789", "requestedQty": 100, "approvedQty": null } ], "createdAt": "2024-06-15T09:00:00+06:00" } Errors: 404 driver_not_found 404 product_not_found 400 validation_error
+
+GET /orders/{id} Response 200: → полный объект заявки как выше Errors: 404 order_not_found
+
+POST /orders/{id}/confirm Подтвердить заявку (approved_qty = requested_qty). Request: пустой body {} Response 200: json{ "id": "uuid", "status": "confirmed", "statusDisplay": "Подтверждена", "items": [ { "id": "uuid", "productId": "uuid", "requestedQty": 100, "approvedQty": 100 } ] } Errors: 404 order_not_found 409 order_already_confirmed 409 order_already_rejected
+
+POST /orders/{id}/modify Изменить количество в заявке. Request: json{ "items": [ { "productId": "uuid", "approvedQty": 80 }, { "productId": "uuid", "approvedQty": 50 } ] } Response 200: json{ "id": "uuid", "status": "modified", "statusDisplay": "Изменена", "totalAmount": "10600.00", "items": [ { "id": "uuid", "productId": "uuid", "requestedQty": 100, "approvedQty": 80 } ] } Errors: 404 order_not_found 409 order_already_rejected 400 validation_error
+
+POST /orders/{id}/reject Отклонить заявку. Request: пустой body {} Response 200: json{ "id": "uuid", "status": "rejected", "statusDisplay": "Отклонена" } Errors: 404 order_not_found 409 order_already_rejected
+
+PAYMENTS (Платежи от водителей) GET /payments История платежей. Query params: ?driver_id=uuid ?date_from=2024-06-01 ?date_to=2024-06-30 ?payment_method=cash|transfer|card ?page=1 Response 200: json{ "count": 15, "results": [ { "id": "uuid", "driverId": "uuid", "driverName": "Азиз Карыбеков", "amount": "5000.00", "paymentMethod": "cash", "paymentMethodDisplay": "Наличные", "comment": "Оплата за прошлую неделю", "receivedBy": "uuid", "receivedByName": "Зав. склада", "paidAt": "2024-06-15T12:00:00+06:00", "createdAt": "2024-06-15T12:00:00+06:00" } ] }
+
+POST /payments Принять деньги от водителя. Request: json{ "driverId": "uuid", "amount": "5000.00", "paymentMethod": "cash", "comment": "Оплата за прошлую неделю", "clientId": "uuid-v4-от-фронта", "createdAt": "2024-06-15T12:00:00+06:00" } clientId — uuid v4 от фронта (идемпотентность) createdAt — реальное время операции (офлайн) Response 201: json{ "id": "uuid", "driverId": "uuid", "amount": "5000.00", "paymentMethod": "cash", "comment": "Оплата за прошлую неделю", "paidAt": "2024-06-15T12:00:00+06:00", "newDebtBalance": "10000.00" } Errors: 404 driver_not_found 400 invalid_amount 409 duplicate_client_id — возвращаем 200 (игнорируем)
+
+GET /payments/{id} Response 200: → объект платежа Errors: 404 payment_not_found
+
+RETURNS (Возвраты товара) GET /returns Список возвратов. Query params: ?driver_id=uuid ?reason=not_sold|melted|damaged|defect|other ?date_from=2024-06-01 ?date_to=2024-06-30 ?page=1 Response 200: json{ "count": 8, "results": [ { "id": "uuid", "driverId": "uuid", "driverName": "Азиз Карыбеков", "totalAmount": "1200.00", "status": "accepted", "returnedAt": "2024-06-15T16:00:00+06:00", "createdAt": "2024-06-15T16:00:00+06:00" } ] }
+
+POST /returns Оформить возврат товара. Request: json{ "driverId": "uuid", "clientId": "uuid-v4-от-фронта", "createdAt": "2024-06-15T16:00:00+06:00", "items": [ { "productId": "uuid", "qtyBoxes": 1, "qtyPieces": 10, "reason": "melted", "unitPrice": "55.00", "photoUrl": null } ] } reason → not_sold | melted | damaged | defect | other Response 201: json{ "id": "uuid", "driverId": "uuid", "totalAmount": "1200.00", "status": "accepted", "returnedAt": "2024-06-15T16:00:00+06:00", "items": [ { "id": "uuid", "productId": "uuid", "productName": "Молоко 3.2% 1л", "qtyBoxes": 1, "qtyPieces": 10, "reason": "melted", "reasonDisplay": "Растаяло", "unitPrice": "55.00", "amount": "1200.00", "photoUrl": null } ], "newDebtBalance": "13800.00" } Errors: 404 driver_not_found 404 product_not_found 400 validation_error 409 duplicate_client_id
+
+GET /returns/{id} Response 200: → полный объект возврата Errors: 404 return_not_found
+
+POST /returns/upload-photo Загрузить фото для возврата. Request: multipart/form-data file:  Response 200: json{ "photoUrl": "https://storage.example.com/returns/photo_uuid.jpg" } Errors: 400 invalid_file_type — только jpg/png/jpeg 400 file_too_large — максимум 5MB
+
+DISPATCH (Подтверждение получения) POST /dispatch/{id}/confirm Водитель подтверждает получение товара. Request: пустой body {} Response 200: json{ "dispatchId": "uuid", "status": "confirmed", "confirmedAt": "2024-06-15T15:00:00+06:00" } Errors: 404 dispatch_not_found 409 dispatch_already_confirmed
+
+OFFLINE SYNC POST /offline/sync Отправить офлайн очередь на сервер. Request: json{ "driverId": "uuid", "operations": [ { "action": "CREATE_ORDER", "clientId": "uuid-v4", "createdAt": "2024-06-15T09:00:00+06:00", "payload": { "driverId": "uuid", "warehouseId": "uuid", "items": [ { "productId": "uuid", "requestedQty": 100 } ] } }, { "action": "CREATE_PAYMENT", "clientId": "uuid-v4", "createdAt": "2024-06-15T12:00:00+06:00", "payload": { "driverId": "uuid", "amount": "5000.00", "paymentMethod": "cash", "comment": "Оплата наличными" } } ] } Поддерживаемые actions: CREATE_ORDER — создать заявку CREATE_RETURN — оформить возврат CREATE_PAYMENT — принять платёж CONFIRM_RECEIPT — подтвердить получение товара Response 200: json{ "processed": 2, "failed": 0, "status": "success", "results": [ { "clientId": "uuid-v4", "action": "CREATE_ORDER", "status": "ok", "id": "uuid" }, { "clientId": "uuid-v4", "action": "CREATE_PAYMENT", "status": "ok", "id": "uuid" } ] } Частичная ошибка: json{ "processed": 1, "failed": 1, "status": "partial", "results": [ { "clientId": "uuid-v4", "action": "CREATE_ORDER", "status": "ok", "id": "uuid" }, { "clientId": "uuid-v4", "action": "CREATE_PAYMENT", "status": "error", "error": { "code": "driver_not_found", "message": "Driver not found" } } ] } status → success | partial | failed Каждая операция обрабатывается независимо. При дубле clientId → статус ok (игнорируем).
+
+WEBSOCKET Base WS URL: ws://localhost:8082/ws
+
+Подключение: Authorization: Bearer <access_token> /topic/orders/new Новая заявка от водителя. json{ "event": "ORDER_CREATED", "data": { "id": "uuid", "driverId": "uuid", "driverName": "Азиз Карыбеков", "warehouseId": "uuid", "totalAmount": "12000.00", "requestedAt": "2024-06-15T09:00:00+06:00", "items": [ { "productId": "uuid", "productName": "Молоко 3.2% 1л", "requestedQty": 100 } ] } } /topic/orders/updated Заявка изменена / подтверждена / отклонена. json{ "event": "ORDER_UPDATED", "data": { "id": "uuid", "status": "confirmed", "statusDisplay": "Подтверждена", "totalAmount": "12000.00", "updatedAt": "2024-06-15T10:00:00+06:00" } }
+
+Матрица доступа Эндпоинт Зав.склада Водитель ───────────────────────────────────────────────────── POST /auth/login ✅ ✅ POST /drivers ✅ ❌ GET /drivers ✅ ❌ GET /drivers/{id} ✅ ✅ (только себя) PUT /drivers/{id} ✅ ❌ GET /drivers/debts ✅ ❌ GET /drivers/{id}/debt ✅ ✅ (только свой) GET /orders ✅ ✅ (только свои) POST /orders ✅ ✅ POST /orders/{id}/confirm ✅ ❌ POST /orders/{id}/modify ✅ ❌ POST /orders/{id}/reject ✅ ❌ GET /payments ✅ ✅ (только свои) POST /payments ✅ ❌ GET /returns ✅ ✅ (только свои) POST /returns ✅ ✅ POST /returns/upload-photo ✅ ✅ POST /dispatch/{id}/confirm ❌ ✅ POST /offline/sync ✅ ✅
+
+HTTP коды 200 — успешный GET / PUT / действие 201 — успешный POST (создание) 204 — успешный DELETE 400 — ошибка валидации / бизнес-логики 401 — не авторизован / токен истёк 403 — нет прав 404 — объект не найден 409 — конфликт (дубликат / неверный статус)
+
+Бизнес-правила
+
+Долг водителя = сумма всех выдач - сумма всех платежей - сумма всех возвратов
+
+При создании водителя автоматически создаётся запись долга с 0
+
+Долг может уйти в минус (переплата)
+
+clientId обязателен для: POST /payments POST /returns POST /offline/sync При дубле → возвращаем 200, не создаём повтор
+
+createdAt — реальное время офлайн операции Записывается в operation_time в БД server_received_at — время получения сервером
+
+Фото загружается отдельно до создания возврата Получаешь photoUrl → передаёшь в POST /returns
+
+WebSocket уведомления идут только зав. складу (не водителю)
+
+Статусы заявки: new → confirmed → dispatched new → modified → dispatched new → rejected Обратно статус не переключается
