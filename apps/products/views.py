@@ -4,7 +4,7 @@ from .serializers import ProductSerializer
 from shared.permissions import IsFactory
 from shared.exceptions import AppException
 
-class ProductListCreateView(generics.ListAPIView):
+class ProductListCreateView(generics.ListCreateAPIView):
     queryset = Product.objects.filter(status='active')
     serializer_class = ProductSerializer
     permission_classes = [IsFactory]
