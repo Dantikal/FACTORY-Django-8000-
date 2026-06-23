@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('products', '0002_product_pieces_per_box'),
+        ('products', '0003_convert_product_pk_to_uuid'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
