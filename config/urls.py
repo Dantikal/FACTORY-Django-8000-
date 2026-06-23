@@ -15,6 +15,7 @@ urlpatterns = [
     path('api/factory/auth/', include('apps.users.urls')),
     path('api/factory/products/', include('apps.products.urls')),
     path('api/factory/shipments/', include('apps.shipments.urls')),
+    path('api/factory/warehouse-orders/', include('apps.warehouse_orders.urls')),
     path('api/factory/reception/', include('apps.reception.urls')),
     path('api/factory/payments/', include('apps.payments.urls')),
     path('api/factory/invoices/', include('apps.invoices.urls')),

@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
+from uuid import uuid4
 
 import requests
 from django.test import RequestFactory, SimpleTestCase, override_settings
@@ -22,7 +23,7 @@ class MockResponse:
 
 def make_product(barcode="123"):
     return SimpleNamespace(
-        id=1,
+        id=uuid4(),
         barcode=barcode,
         name="Test product",
         pieces_per_box=12,

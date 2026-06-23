@@ -47,8 +47,18 @@ class ShipmentService:
                 price=it['price'],
                 total=it['total']
             )
-        
-        publish_shipment_created(shipment.id, warehouse_id, total_amount)
+
+        event_items = [
+            {
+                'product_id': str(it['product_id']),
+                'qty_boxes': it['qty_boxes'],
+                'qty_pieces': it['qty_pieces'],
+                'price': str(it['price']),
+                'total': str(it['total']),
+            }
+            for it in enriched_items
+        ]
+        publish_shipment_created(shipment.id, warehouse_id, event_items)
         return shipment
 
     @staticmethod

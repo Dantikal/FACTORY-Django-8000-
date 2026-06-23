@@ -16,6 +16,13 @@ class Shipment(BaseModel):
     created_by = models.ForeignKey('users.User', on_delete=models.PROTECT, related_name="shipments")
 
 class ShipmentItem(BaseModel):
+    shipment = models.ForeignKey(
+        Shipment,
+        on_delete=models.CASCADE,
+        related_name='items',
+        null=True,
+        blank=True,
+    )
     product = models.ForeignKey('products.Product', on_delete=models.PROTECT)
     qty_boxes = models.PositiveBigIntegerField()
     qty_pieces = models.PositiveBigIntegerField()

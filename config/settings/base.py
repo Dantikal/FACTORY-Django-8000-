@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'apps.users',
     'apps.products',
     'apps.shipments',
+    'apps.warehouse_orders',
     'apps.reception',
     'apps.payments',
     'apps.invoices',
