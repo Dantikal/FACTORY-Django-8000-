@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 from django.db import transaction
 from .models import FactoryDelivery, DeliveryItem, DeliveryStatus, DiscrepancyType
@@ -22,6 +24,19 @@ class DeliveryItemSerializer(serializers.ModelSerializer):
             'discrepancy_qty', 'created_at'
         ]
         read_only_fields = ['id', 'created_at', 'discrepancy_type', 'discrepancy_qty']
+
+
+class OfflineReceptionItemSerializer(serializers.Serializer):
+    barcode = serializers.CharField(max_length=100)
+    actualQty = serializers.IntegerField(min_value=0)
+    factoryPrice = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0'))
+
+
+class OfflineReceptionSerializer(serializers.Serializer):
+    warehouseId = serializers.UUIDField()
+    createdAt = serializers.DateTimeField()
+    clientId = serializers.UUIDField()
+    items = OfflineReceptionItemSerializer(many=True, allow_empty=False)
 
 
 class FactoryDeliverySerializer(serializers.ModelSerializer):

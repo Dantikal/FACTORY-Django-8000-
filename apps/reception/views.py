@@ -1,7 +1,11 @@
 from rest_framework import generics, status  # Исправлено: starus → status
 from rest_framework.response import Response  # Исправлено: Responce → Response
 from .models import FactoryDelivery
-from .serializers import FactoryDeliverySerializer, AcceptPartialItemSerializer  # Исправлено: AcceptPartialItemSerializer (было AcceptPartialItemSerializer)
+from .serializers import (
+    FactoryDeliverySerializer,
+    AcceptPartialItemSerializer,
+    OfflineReceptionSerializer,
+)
 from .services import ReceptionService
 from shared.permissions import IsFactory
 
@@ -16,6 +20,22 @@ class ReceptionDetailView(generics.RetrieveAPIView):  # Исправлено: De
     queryset = FactoryDelivery.objects.all()
     serializer_class = FactoryDeliverySerializer
     permission_classes = [IsFactory]
+
+
+class OfflineReceptionView(generics.GenericAPIView):
+    permission_classes = [IsFactory]
+    serializer_class = OfflineReceptionSerializer
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        delivery, created = ReceptionService.create_offline(serializer.validated_data, request.user)
+        response_serializer = FactoryDeliverySerializer(delivery)
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
 
 class AcceptFullView(generics.GenericAPIView):
     permission_classes = [IsFactory]

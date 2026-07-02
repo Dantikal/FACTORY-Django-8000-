@@ -23,7 +23,9 @@ class FactoryDelivery(BaseModel):
     shipment = models.ForeignKey(
         'shipments.Shipment',
         on_delete=models.PROTECT,
-        related_name='deliveries'
+        related_name='deliveries',
+        null=True,
+        blank=True
     )
     warehouse_id = models.UUIDField(help_text='ID склада получателя')
     delivery_number = models.CharField(max_length=100, unique=True, help_text='Номер поставки')
@@ -62,7 +64,9 @@ class FactoryDelivery(BaseModel):
         ordering = ['-delivered_at']
 
     def __str__(self):
-        return f'{self.delivery_number} - {self.shipment.truck_driver}'
+        if self.shipment_id:
+            return f'{self.delivery_number} - {self.shipment.truck_driver}'
+        return f'{self.delivery_number} - offline'
 
 
 class DeliveryItem(BaseModel):

@@ -1,7 +1,11 @@
+from decimal import Decimal
+
 from django.db import transaction
 from .models import FactoryDelivery, DeliveryItem, DeliveryStatus
 from apps.payments.services import increase_warehouse_debt
-from apps.events.publisher import publish_reception_completed
+from apps.events.publisher import publish_reception_completed, publish_reception_completed_offline
+from apps.products.models import Product
+from shared.exceptions import AppException
 
 
 def _delivery_items_payload(delivery):
@@ -17,6 +21,72 @@ def _delivery_items_payload(delivery):
     ]
 
 class ReceptionService:
+    @staticmethod
+    @transaction.atomic
+    def create_offline(validated_data, user):
+        client_id = str(validated_data['clientId'])
+        existing = FactoryDelivery.objects.filter(client_id=client_id).prefetch_related('items__product').first()
+        if existing:
+            return existing, False
+
+        products_by_barcode = {
+            product.barcode: product
+            for product in Product.objects.filter(
+                barcode__in=[item['barcode'] for item in validated_data['items']]
+            )
+        }
+        missing_barcodes = [
+            item['barcode']
+            for item in validated_data['items']
+            if item['barcode'] not in products_by_barcode
+        ]
+        if missing_barcodes:
+            raise AppException(
+                status_code=404,
+                error_code='product_not_found',
+                message=f"Product with barcode '{missing_barcodes[0]}' not found",
+                fields={'barcode': missing_barcodes[0]},
+            )
+
+        operation_time = validated_data['createdAt']
+        total_amount = sum(
+            Decimal(item['actualQty']) * item['factoryPrice']
+            for item in validated_data['items']
+        )
+
+        delivery, created = FactoryDelivery.objects.get_or_create(
+            client_id=client_id,
+            defaults={
+                'shipment': None,
+                'warehouse_id': validated_data['warehouseId'],
+                'delivery_number': f'offline-{client_id}',
+                'delivered_at': operation_time,
+                'status': DeliveryStatus.ACCEPTED,
+                'total_amount': total_amount,
+                'created_by': user,
+                'operation_time': operation_time,
+            },
+        )
+        if not created:
+            delivery = FactoryDelivery.objects.prefetch_related('items__product').get(id=delivery.id)
+            return delivery, False
+
+        for item in validated_data['items']:
+            DeliveryItem.objects.create(
+                delivery=delivery,
+                product=products_by_barcode[item['barcode']],
+                expected_qty=item['actualQty'],
+                actual_qty=item['actualQty'],
+                discrepancy_type='none',
+                discrepancy_qty=0,
+            )
+
+        increase_warehouse_debt(delivery.warehouse_id, total_amount)
+        FactoryDelivery.objects.filter(id=delivery.id).update(created_at=operation_time)
+        delivery = FactoryDelivery.objects.prefetch_related('items__product').get(id=delivery.id)
+        publish_reception_completed_offline(delivery.id, delivery.warehouse_id, _delivery_items_payload(delivery))
+        return delivery, True
+
     @staticmethod
     @transaction.atomic
     def accept_full(delivery_id):

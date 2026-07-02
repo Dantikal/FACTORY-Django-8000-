@@ -29,6 +29,18 @@ def publish_reception_completed(delivery_id, warehouse_id, items_data):
     redis_client.publish("factory.reception.completed", json.dumps(event_data))
     return True
 
+def publish_reception_completed_offline(delivery_id, warehouse_id, items_data):
+    """
+    Отправляет событие о завершении офлайн-приемки склада.
+    """
+    event_data = {
+        "delivery_id": str(delivery_id),
+        "warehouse_id": str(warehouse_id),
+        "items": items_data
+    }
+    redis_client.publish("reception.completed", json.dumps(event_data))
+    return True
+
 def publish_factory_payment_sent(payment_id, warehouse_id, amount, paid_at):
     """
     Отправляет событие об отправке платежа
