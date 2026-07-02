@@ -1,4 +1,5 @@
 from rest_framework import generics, status  # Исправлено: starus → status
+from rest_framework.permissions import BasePermission
 from rest_framework.response import Response  # Исправлено: Responce → Response
 from .models import FactoryDelivery
 from .serializers import (
@@ -8,6 +9,14 @@ from .serializers import (
 )
 from .services import ReceptionService
 from shared.permissions import IsFactory
+
+
+class IsFactoryOrWarehouseManager(BasePermission):
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated
+            and request.user.role in ('admin', 'factory', 'warehouse_manager')
+        )
 
 
 class ReceptionListCreateView(generics.ListCreateAPIView):
@@ -23,7 +32,7 @@ class ReceptionDetailView(generics.RetrieveAPIView):  # Исправлено: De
 
 
 class OfflineReceptionView(generics.GenericAPIView):
-    permission_classes = [IsFactory]
+    permission_classes = [IsFactoryOrWarehouseManager]
     serializer_class = OfflineReceptionSerializer
 
     def post(self, request):

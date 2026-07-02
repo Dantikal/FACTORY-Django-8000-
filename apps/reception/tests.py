@@ -19,6 +19,12 @@ class OfflineReceptionApiTests(APITestCase):
             full_name='Factory',
             role='factory',
         )
+        self.warehouse_manager = User.objects.create_user(
+            username='warehouse-manager',
+            password='pass',
+            full_name='Warehouse Manager',
+            role='warehouse_manager',
+        )
         self.warehouse_id = uuid4()
         self.product = Product.objects.create(
             barcode='4600001',
@@ -63,6 +69,31 @@ class OfflineReceptionApiTests(APITestCase):
         self.assertEqual(item.actual_qty, 100)
         self.assertEqual(item.expected_qty, 100)
         self.assertEqual(WarehouseDebt.objects.get(warehouse_id=self.warehouse_id).amount, Decimal('5500.00'))
+        publish_mock.assert_called_once()
+
+    @patch('apps.reception.services.publish_reception_completed_offline')
+    def test_warehouse_manager_can_create_offline_reception(self, publish_mock):
+        self.client.force_authenticate(self.warehouse_manager)
+
+        response = self.client.post(
+            '/api/factory/reception/offline',
+            {
+                'warehouseId': str(self.warehouse_id),
+                'createdAt': '2026-07-02T10:00:00+06:00',
+                'clientId': str(uuid4()),
+                'items': [
+                    {
+                        'barcode': self.product.barcode,
+                        'actualQty': 100,
+                        'factoryPrice': '55.00',
+                    },
+                ],
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(FactoryDelivery.objects.get().created_by, self.warehouse_manager)
         publish_mock.assert_called_once()
 
     @patch('apps.reception.services.publish_reception_completed_offline')
